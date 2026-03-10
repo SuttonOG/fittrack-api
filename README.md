@@ -59,6 +59,7 @@ uvicorn main:app --reload
 ```
 
 The API will be available at `http://127.0.0.1:8000`.
+**Live deployment:** https://fittrack-api-kwno.onrender.com             
 
 Interactive documentation: `http://127.0.0.1:8000/docs`
 
