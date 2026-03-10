@@ -22,13 +22,11 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 def hash_password(password: str) -> str:
     """Return a bcrypt hash of the given plaintext password."""
-    return pwd_context.hash(password)
-
+    return pwd_context.hash(password[:72])
 
 def verify_password(plain: str, hashed: str) -> bool:
     """Check a plaintext password against a stored bcrypt hash."""
-    return pwd_context.verify(plain, hashed)
-
+    return pwd_context.verify(plain[:72], hashed)
 
 # ---------------------------------------------------------------------------
 # Token helpers
