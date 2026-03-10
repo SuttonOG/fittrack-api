@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FitTrack — Workout & Fitness Analytics</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg-primary: #0f1117;
+            --bg-secondary: #1a1d27;
+            --bg-card: #21242f;
+            --bg-card-hover: #282c3a;
+            --bg-input: #181b24;
+            --border: #2a2e3b;
+            --border-focus: #6c5ce7;
+            --text-primary: #eef0f6;
+            --text-secondary: #8b90a0;
+            --text-muted: #5a5f72;
+            --accent: #6c5ce7;
+            --accent-hover: #7f71ed;
+            --accent-glow: rgba(108, 92, 231, 0.15);
+            --green: #00c853;
+            --green-bg: rgba(0, 200, 83, 0.1);
+            --red: #ff5252;
+            --red-bg: rgba(255, 82, 82, 0.1);
+            --orange: #ff9100;
+            --orange-bg: rgba(255, 145, 0, 0.1);
+            --blue: #448aff;
+            --blue-bg: rgba(68, 138, 255, 0.1);
+            --radius: 10px;
+            --radius-lg: 14px;
+            --shadow: 0 2px 12px rgba(0,0,0,0.25);
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        /* ── Scrollbar ─────────────────────────────── */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        /* ── Auth Screen ───────────────────────────── */
+        .auth-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        .auth-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: var(--shadow);
+        }
+        .auth-box h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+            letter-spacing: -0.02em;
+        }
+        .auth-box .brand {
+            color: var(--accent);
+        }
+        .auth-box p.sub {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+        .auth-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 1.5rem;
+            background: var(--bg-input);
+            border-radius: 8px;
+            padding: 3px;
+        }
+        .auth-tab {
+            flex: 1;
+            text-align: center;
+            padding: 0.5rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 6px;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+            border: none;
+            background: none;
+        }
+        .auth-tab.active {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        /* ── Form Elements ─────────────────────────── */
+        .form-group { margin-bottom: 1rem; }
+        .form-group label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.35rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 0.65rem 0.85rem;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+            outline: none;
+        }
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+        input::placeholder { color: var(--text-muted); }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            padding: 0.65rem 1.25rem;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+            width: 100%;
+        }
+        .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+        .btn-sm { padding: 0.45rem 0.85rem; font-size: 0.8rem; }
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+        .btn-ghost:hover { border-color: var(--text-secondary); color: var(--text-primary); }
+        .btn-danger { background: var(--red-bg); color: var(--red); border: 1px solid transparent; }
+        .btn-danger:hover { border-color: var(--red); }
+        .btn-green { background: var(--green-bg); color: var(--green); border: 1px solid transparent; }
+        .btn-green:hover { border-color: var(--green); }
+
+        .error-msg {
+            background: var(--red-bg);
+            color: var(--red);
+            padding: 0.6rem 0.85rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        .success-msg {
+            background: var(--green-bg);
+            color: var(--green);
+            padding: 0.6rem 0.85rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        /* ── App Shell ─────────────────────────────── */
+        .app { display: none; }
+        .app.active { display: flex; min-height: 100vh; }
+
+        /* Sidebar */
+        .sidebar {
+            width: 220px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            padding: 1.25rem 0;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            z-index: 10;
+        }
+        .sidebar-brand {
+            padding: 0 1.25rem;
+            margin-bottom: 1.75rem;
+        }
+        .sidebar-brand h2 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+        .sidebar-brand h2 span { color: var(--accent); }
+        .sidebar-brand p {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 0.15rem;
+        }
+        .nav-items { flex: 1; }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            padding: 0.6rem 1.25rem;
+            font-size: 0.88rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.15s;
+            border-left: 3px solid transparent;
+        }
+        .nav-item:hover { color: var(--text-primary); background: rgba(255,255,255,0.03); }
+        .nav-item.active {
+            color: var(--accent);
+            border-left-color: var(--accent);
+            background: var(--accent-glow);
+        }
+        .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+        .sidebar-footer {
+            padding: 1rem 1.25rem;
+            border-top: 1px solid var(--border);
+        }
+        .sidebar-footer .user-info {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.6rem;
+        }
+        .sidebar-footer .user-info strong { color: var(--text-primary); }
+
+        /* Main Content */
+        .main {
+            margin-left: 220px;
+            flex: 1;
+            padding: 2rem 2.5rem;
+            max-width: 1100px;
+        }
+        .page { display: none; }
+        .page.active { display: block; animation: fadeIn 0.25s ease; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .page-header {
+            margin-bottom: 1.75rem;
+        }
+        .page-header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+        .page-header p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 0.2rem;
+        }
+        .page-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        /* ── Cards & Stats ─────────────────────────── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.15rem;
+        }
+        .stat-card .label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .stat-card .value {
+            font-size: 1.7rem;
+            font-weight: 700;
+            margin-top: 0.25rem;
+            letter-spacing: -0.03em;
+        }
+        .stat-card .sub {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            margin-top: 0.15rem;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        /* ── Tables ────────────────────────────────── */
+        .table-wrap { overflow-x: auto; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        thead th {
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 0.65rem 0.85rem;
+            border-bottom: 1px solid var(--border);
+        }
+        tbody td {
+            padding: 0.7rem 0.85rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+        tbody tr:hover td { background: rgba(255,255,255,0.02); color: var(--text-primary); }
+
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.55rem;
+            border-radius: 5px;
+            font-size: 0.73rem;
+            font-weight: 600;
+        }
+        .badge-purple { background: var(--accent-glow); color: var(--accent); }
+        .badge-green { background: var(--green-bg); color: var(--green); }
+        .badge-orange { background: var(--orange-bg); color: var(--orange); }
+        .badge-blue { background: var(--blue-bg); color: var(--blue); }
+
+        /* ── Charts ────────────────────────────────── */
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .chart-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.25rem;
+        }
+        .chart-card h3 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        .chart-card canvas { max-height: 280px; }
+
+        /* ── Modal ─────────────────────────────────── */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            width: 90%;
+            max-width: 460px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+        }
+        .modal h2 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 1.25rem;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 0.6rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+        }
+
+        /* ── Empty States ──────────────────────────── */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-muted);
+        }
+        .empty-state svg { margin-bottom: 0.75rem; opacity: 0.4; }
+        .empty-state p { font-size: 0.9rem; }
+
+        /* ── Records list ──────────────────────────── */
+        .record-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .record-item:last-child { border-bottom: none; }
+        .record-item .name { font-weight: 600; font-size: 0.9rem; }
+        .record-item .detail { color: var(--text-secondary); font-size: 0.82rem; }
+        .record-item .pr {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--green);
+        }
+
+        /* ── Loading ───────────────────────────────── */
+        .spinner {
+            width: 20px; height: 20px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin: 2rem auto;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Responsive ────────────────────────────── */
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .main { margin-left: 0; padding: 1.25rem; }
+            .chart-grid { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════ AUTH ═══ -->
+<div class="auth-wrapper" id="authScreen">
+    <div class="auth-box">
+        <h1><span class="brand">Fit</span>Track</h1>
+        <p class="sub">Workout &amp; Fitness Analytics</p>
+
+        <div class="auth-tabs">
+            <button class="auth-tab active" onclick="switchAuthTab('login')">Sign In</button>
+            <button class="auth-tab" onclick="switchAuthTab('register')">Register</button>
+        </div>
+
+        <div id="authError" class="error-msg"></div>
+        <div id="authSuccess" class="success-msg"></div>
+
+        <!-- Login -->
+        <form id="loginForm" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="loginUser" placeholder="Enter username" required>
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="loginPass" placeholder="Enter password" required>
+            </div>
+            <button class="btn btn-primary" type="submit">Sign In</button>
+        </form>
+
+        <!-- Register -->
+        <form id="registerForm" style="display:none" onsubmit="handleRegister(event)">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="regUser" placeholder="Choose a username" required minlength="3">
+            </div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="regEmail" placeholder="your@email.com" required>
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="regPass" placeholder="Min 6 characters" required minlength="6">
+            </div>
+            <button class="btn btn-primary" type="submit">Create Account</button>
+        </form>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ APP ═══ -->
+<div class="app" id="appShell">
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="sidebar-brand">
+            <h2><span>Fit</span>Track</h2>
+            <p>Workout Analytics</p>
+        </div>
+        <div class="nav-items">
+            <div class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                Dashboard
+            </div>
+            <div class="nav-item" data-page="exercises" onclick="navigate('exercises')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6.5 6.5h11M6.5 17.5h11M2 12h4M18 12h4M6 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM22 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg>
+                Exercises
+            </div>
+            <div class="nav-item" data-page="workouts" onclick="navigate('workouts')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>
+                Workouts
+            </div>
+            <div class="nav-item" data-page="logs" onclick="navigate('logs')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                Logs
+            </div>
+            <div class="nav-item" data-page="analytics" onclick="navigate('analytics')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                Analytics
+            </div>
+        </div>
+        <div class="sidebar-footer">
+            <div class="user-info">Signed in as<br><strong id="sidebarUser">—</strong></div>
+            <button class="btn btn-ghost btn-sm" onclick="logout()" style="width:100%">Sign Out</button>
+        </div>
+    </nav>
+
+    <!-- Main content area -->
+    <div class="main">
+
+        <!-- ── Dashboard ─────────────────────────── -->
+        <div class="page active" id="page-dashboard">
+            <div class="page-header">
+                <h1>Dashboard</h1>
+                <p>Your fitness overview at a glance</p>
+            </div>
+            <div class="stats-grid" id="dashStats">
+                <div class="stat-card"><div class="label">Total Workouts</div><div class="value" id="statWorkouts">—</div></div>
+                <div class="stat-card"><div class="label">Exercises Logged</div><div class="value" id="statLogs">—</div></div>
+                <div class="stat-card"><div class="label">Current Streak</div><div class="value" id="statStreak">—</div><div class="sub">consecutive days</div></div>
+                <div class="stat-card"><div class="label">Longest Streak</div><div class="value" id="statLongest">—</div><div class="sub">consecutive days</div></div>
+            </div>
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <h3>Volume Trends (Weekly)</h3>
+                    <canvas id="dashVolumeChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Muscle Group Distribution</h3>
+                    <canvas id="dashMuscleChart"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Personal Records</h3>
+                <div id="dashRecords"><div class="spinner"></div></div>
+            </div>
+        </div>
+
+        <!-- ── Exercises ─────────────────────────── -->
+        <div class="page" id="page-exercises">
+            <div class="page-header page-header-row">
+                <div><h1>Exercises</h1><p>Browse and manage the exercise catalogue</p></div>
+                <button class="btn btn-primary btn-sm" onclick="openModal('exerciseModal')">+ Add Exercise</button>
+            </div>
+            <div class="card" style="padding:0;">
+                <div style="padding:1rem 1.25rem; border-bottom:1px solid var(--border); display:flex; gap:0.75rem;">
+                    <select id="filterMuscle" onchange="loadExercises()" style="width:auto; min-width:140px;">
+                        <option value="">All muscles</option>
+                        <option value="chest">Chest</option>
+                        <option value="back">Back</option>
+                        <option value="legs">Legs</option>
+                        <option value="shoulders">Shoulders</option>
+                        <option value="arms">Arms</option>
+                        <option value="core">Core</option>
+                    </select>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Name</th><th>Muscle Group</th><th>Equipment</th><th>Difficulty</th><th></th></tr></thead>
+                        <tbody id="exerciseTable"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Workouts ──────────────────────────── -->
+        <div class="page" id="page-workouts">
+            <div class="page-header page-header-row">
+                <div><h1>Workouts</h1><p>Your workout plans</p></div>
+                <button class="btn btn-primary btn-sm" onclick="openModal('workoutModal')">+ New Workout</button>
+            </div>
+            <div id="workoutList"></div>
+        </div>
+
+        <!-- ── Logs ──────────────────────────────── -->
+        <div class="page" id="page-logs">
+            <div class="page-header page-header-row">
+                <div><h1>Workout Logs</h1><p>Your logged sessions</p></div>
+                <button class="btn btn-primary btn-sm" onclick="openLogModal()">+ Log Session</button>
+            </div>
+            <div class="card" style="padding:0;">
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Date</th><th>Workout</th><th>Exercise</th><th>Sets</th><th>Reps</th><th>Weight (kg)</th><th>Notes</th><th></th></tr></thead>
+                        <tbody id="logTable"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Analytics ─────────────────────────── -->
+        <div class="page" id="page-analytics">
+            <div class="page-header">
+                <h1>Analytics</h1>
+                <p>Deep dive into your training data</p>
+            </div>
+            <div class="stats-grid" id="analyticsStats"></div>
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <h3>Volume Over Time</h3>
+                    <div style="margin-bottom:0.75rem;">
+                        <select id="volumePeriod" onchange="loadAnalytics()" style="width:auto;">
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                        </select>
+                    </div>
+                    <canvas id="volumeChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Muscle Group Split</h3>
+                    <canvas id="muscleChart"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <h3>All Personal Records</h3>
+                <div id="prList"><div class="spinner"></div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ MODALS ═══ -->
+
+<!-- Exercise Modal -->
+<div class="modal-overlay" id="exerciseModal">
+    <div class="modal">
+        <h2>Add Exercise</h2>
+        <div class="form-group"><label>Name</label><input id="exName" required></div>
+        <div class="form-group"><label>Muscle Group</label>
+            <select id="exMuscle"><option value="chest">Chest</option><option value="back">Back</option><option value="legs">Legs</option><option value="shoulders">Shoulders</option><option value="arms">Arms</option><option value="core">Core</option></select>
+        </div>
+        <div class="form-group"><label>Equipment</label><input id="exEquip" placeholder="e.g. barbell, dumbbells"></div>
+        <div class="form-group"><label>Difficulty</label>
+            <select id="exDiff"><option value="beginner">Beginner</option><option value="intermediate" selected>Intermediate</option><option value="advanced">Advanced</option></select>
+        </div>
+        <div class="form-group"><label>Description</label><textarea id="exDesc" rows="2"></textarea></div>
+        <div class="modal-actions">
+            <button class="btn btn-ghost btn-sm" onclick="closeModal('exerciseModal')">Cancel</button>
+            <button class="btn btn-primary btn-sm" onclick="createExercise()">Add Exercise</button>
+        </div>
+    </div>
+</div>
+
+<!-- Workout Modal -->
+<div class="modal-overlay" id="workoutModal">
+    <div class="modal">
+        <h2>New Workout</h2>
+        <div class="form-group"><label>Name</label><input id="wkName" required placeholder="e.g. Push Day A"></div>
+        <div class="form-group"><label>Description</label><textarea id="wkDesc" rows="2" placeholder="Optional description"></textarea></div>
+        <div class="form-group"><label>Scheduled Date</label><input id="wkDate" type="date"></div>
+        <div class="modal-actions">
+            <button class="btn btn-ghost btn-sm" onclick="closeModal('workoutModal')">Cancel</button>
+            <button class="btn btn-primary btn-sm" onclick="createWorkout()">Create</button>
+        </div>
+    </div>
+</div>
+
+<!-- Log Modal -->
+<div class="modal-overlay" id="logModal">
+    <div class="modal">
+        <h2>Log Session</h2>
+        <div class="form-group"><label>Workout</label><select id="logWorkout"></select></div>
+        <div class="form-group"><label>Exercise</label><select id="logExercise"></select></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+            <div class="form-group"><label>Sets</label><input id="logSets" type="number" min="1" value="3"></div>
+            <div class="form-group"><label>Reps</label><input id="logReps" type="number" min="1" value="10"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+            <div class="form-group"><label>Weight (kg)</label><input id="logWeight" type="number" step="0.5" min="0"></div>
+            <div class="form-group"><label>Duration (min)</label><input id="logDuration" type="number" step="0.5" min="0"></div>
+        </div>
+        <div class="form-group"><label>Notes</label><input id="logNotes" placeholder="Optional notes"></div>
+        <div class="modal-actions">
+            <button class="btn btn-ghost btn-sm" onclick="closeModal('logModal')">Cancel</button>
+            <button class="btn btn-primary btn-sm" onclick="createLog()">Log It</button>
+        </div>
+    </div>
+</div>
+
+
+<script>
+// ═══════════════════════════════════════════════ CONFIG ═══
+const API = window.location.origin;
+let TOKEN = localStorage.getItem('fittrack_token') || '';
+let USERNAME = localStorage.getItem('fittrack_user') || '';
+
+// Chart instances (to destroy before re-creating)
+let chartInstances = {};
+
+// ═══════════════════════════════════════════════ HELPERS ═══
+async function api(path, opts = {}) {
+    const headers = { 'Content-Type': 'application/json', ...opts.headers };
+    if (TOKEN) headers['Authorization'] = `Bearer ${TOKEN}`;
+    const res = await fetch(`${API}${path}`, { ...opts, headers });
+    if (res.status === 204) return null;
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Request failed');
+    return data;
+}
+
+function showError(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg; el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 4000);
+}
+function showSuccess(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg; el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 3000);
+}
+
+function openModal(id) { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+function diffBadge(d) {
+    const map = { beginner: 'badge-green', intermediate: 'badge-blue', advanced: 'badge-orange' };
+    return `<span class="badge ${map[d] || 'badge-purple'}">${d}</span>`;
+}
+
+function destroyChart(key) {
+    if (chartInstances[key]) { chartInstances[key].destroy(); delete chartInstances[key]; }
+}
+
+// ═══════════════════════════════════════════════ AUTH ═══
+function switchAuthTab(tab) {
+    document.querySelectorAll('.auth-tab').forEach((t, i) => {
+        t.classList.toggle('active', (tab === 'login' && i === 0) || (tab === 'register' && i === 1));
+    });
+    document.getElementById('loginForm').style.display = tab === 'login' ? '' : 'none';
+    document.getElementById('registerForm').style.display = tab === 'register' ? '' : 'none';
+    document.getElementById('authError').style.display = 'none';
+    document.getElementById('authSuccess').style.display = 'none';
+}
+
+async function handleLogin(e) {
+    e.preventDefault();
+    try {
+        const data = await api('/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({ username: document.getElementById('loginUser').value, password: document.getElementById('loginPass').value })
+        });
+        TOKEN = data.access_token;
+        USERNAME = document.getElementById('loginUser').value;
+        localStorage.setItem('fittrack_token', TOKEN);
+        localStorage.setItem('fittrack_user', USERNAME);
+        enterApp();
+    } catch (err) { showError('authError', err.message); }
+}
+
+async function handleRegister(e) {
+    e.preventDefault();
+    try {
+        await api('/auth/register', {
+            method: 'POST',
+            body: JSON.stringify({
+                username: document.getElementById('regUser').value,
+                email: document.getElementById('regEmail').value,
+                password: document.getElementById('regPass').value,
+            })
+        });
+        showSuccess('authSuccess', 'Account created! You can now sign in.');
+        switchAuthTab('login');
+    } catch (err) { showError('authError', err.message); }
+}
+
+function logout() {
+    TOKEN = ''; USERNAME = '';
+    localStorage.removeItem('fittrack_token');
+    localStorage.removeItem('fittrack_user');
+    document.getElementById('authScreen').style.display = '';
+    document.getElementById('appShell').classList.remove('active');
+}
+
+function enterApp() {
+    document.getElementById('authScreen').style.display = 'none';
+    document.getElementById('appShell').classList.add('active');
+    document.getElementById('sidebarUser').textContent = USERNAME;
+    navigate('dashboard');
+}
+
+// Auto-login if token exists
+if (TOKEN) { enterApp(); }
+
+// ═══════════════════════════════════════════════ NAVIGATION ═══
+function navigate(page) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById(`page-${page}`).classList.add('active');
+    document.querySelector(`.nav-item[data-page="${page}"]`).classList.add('active');
+
+    if (page === 'dashboard') loadDashboard();
+    else if (page === 'exercises') loadExercises();
+    else if (page === 'workouts') loadWorkouts();
+    else if (page === 'logs') loadLogs();
+    else if (page === 'analytics') loadAnalytics();
+}
+
+// ═══════════════════════════════════════════════ DASHBOARD ═══
+async function loadDashboard() {
+    try {
+        const [workouts, logs, streak, volume, muscle, records] = await Promise.all([
+            api('/workouts/'),
+            api('/logs/'),
+            api('/analytics/streak'),
+            api('/analytics/volume-trends?period=weekly'),
+            api('/analytics/muscle-group-distribution'),
+            api('/analytics/personal-records'),
+        ]);
+
+        document.getElementById('statWorkouts').textContent = workouts.length;
+        document.getElementById('statLogs').textContent = logs.length;
+        document.getElementById('statStreak').textContent = streak.current_streak_days;
+        document.getElementById('statLongest').textContent = streak.longest_streak_days;
+
+        // Volume chart
+        destroyChart('dashVolume');
+        const vCtx = document.getElementById('dashVolumeChart').getContext('2d');
+        chartInstances.dashVolume = new Chart(vCtx, {
+            type: 'bar',
+            data: {
+                labels: volume.trends.map(t => t.period_label),
+                datasets: [{
+                    label: 'Volume (kg)',
+                    data: volume.trends.map(t => t.total_volume_kg),
+                    backgroundColor: 'rgba(108, 92, 231, 0.5)',
+                    borderColor: '#6c5ce7',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                }]
+            },
+            options: chartOpts('Volume (kg)')
+        });
+
+        // Muscle chart
+        destroyChart('dashMuscle');
+        const mCtx = document.getElementById('dashMuscleChart').getContext('2d');
+        const muscleColors = ['#6c5ce7','#00c853','#448aff','#ff9100','#ff5252','#26c6da','#ab47bc'];
+        chartInstances.dashMuscle = new Chart(mCtx, {
+            type: 'doughnut',
+            data: {
+                labels: muscle.distribution.map(d => d.muscle_group),
+                datasets: [{
+                    data: muscle.distribution.map(d => d.total_sets),
+                    backgroundColor: muscleColors,
+                    borderColor: '#21242f',
+                    borderWidth: 2,
+                }]
+            },
+            options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#8b90a0', font: { family: 'DM Sans' } } } } }
+        });
+
+        // Records
+        const prHtml = records.personal_records.length
+            ? records.personal_records.map(r => `
+                <div class="record-item">
+                    <div><div class="name">${r.exercise_name}</div><div class="detail">${r.reps} reps</div></div>
+                    <div class="pr">${r.best_weight_kg} kg</div>
+                </div>`).join('')
+            : '<div class="empty-state"><p>No records yet. Start logging workouts!</p></div>';
+        document.getElementById('dashRecords').innerHTML = prHtml;
+
+    } catch (err) { console.error('Dashboard error:', err); }
+}
+
+function chartOpts(yLabel) {
+    return {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { ticks: { color: '#5a5f72', font: { family: 'DM Sans', size: 11 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+            y: { ticks: { color: '#5a5f72', font: { family: 'DM Sans', size: 11 } }, grid: { color: 'rgba(255,255,255,0.04)' }, title: { display: true, text: yLabel, color: '#8b90a0' } }
+        }
+    };
+}
+
+// ═══════════════════════════════════════════════ EXERCISES ═══
+async function loadExercises() {
+    const muscle = document.getElementById('filterMuscle').value;
+    const qs = muscle ? `?muscle_group=${muscle}` : '';
+    try {
+        const data = await api(`/exercises/${qs}`);
+        const tbody = document.getElementById('exerciseTable');
+        tbody.innerHTML = data.length ? data.map(e => `
+            <tr>
+                <td style="color:var(--text-primary);font-weight:500">${e.name}</td>
+                <td><span class="badge badge-purple">${e.muscle_group}</span></td>
+                <td>${e.equipment || '—'}</td>
+                <td>${diffBadge(e.difficulty)}</td>
+                <td><button class="btn btn-danger btn-sm" onclick="deleteExercise(${e.id})">Delete</button></td>
+            </tr>`).join('')
+            : '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted)">No exercises found</td></tr>';
+    } catch (err) { console.error(err); }
+}
+
+async function createExercise() {
+    try {
+        await api('/exercises/', {
+            method: 'POST',
+            body: JSON.stringify({
+                name: document.getElementById('exName').value,
+                muscle_group: document.getElementById('exMuscle').value,
+                equipment: document.getElementById('exEquip').value || null,
+                difficulty: document.getElementById('exDiff').value,
+                description: document.getElementById('exDesc').value || null,
+            })
+        });
+        closeModal('exerciseModal');
+        document.getElementById('exName').value = '';
+        document.getElementById('exEquip').value = '';
+        document.getElementById('exDesc').value = '';
+        loadExercises();
+    } catch (err) { alert(err.message); }
+}
+
+async function deleteExercise(id) {
+    if (!confirm('Delete this exercise?')) return;
+    try { await api(`/exercises/${id}`, { method: 'DELETE' }); loadExercises(); }
+    catch (err) { alert(err.message); }
+}
+
+// ═══════════════════════════════════════════════ WORKOUTS ═══
+async function loadWorkouts() {
+    try {
+        const data = await api('/workouts/');
+        const container = document.getElementById('workoutList');
+        container.innerHTML = data.length ? data.map(w => `
+            <div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <div style="font-weight:600;font-size:1rem;">${w.name}</div>
+                    <div style="color:var(--text-secondary);font-size:0.83rem;margin-top:0.2rem;">
+                        ${w.description || 'No description'} ${w.scheduled_date ? ` · ${w.scheduled_date}` : ''}
+                    </div>
+                </div>
+                <div style="display:flex;gap:0.5rem;">
+                    <button class="btn btn-danger btn-sm" onclick="deleteWorkout(${w.id})">Delete</button>
+                </div>
+            </div>`).join('')
+            : '<div class="empty-state"><p>No workouts yet. Create your first plan!</p></div>';
+    } catch (err) { console.error(err); }
+}
+
+async function createWorkout() {
+    try {
+        await api('/workouts/', {
+            method: 'POST',
+            body: JSON.stringify({
+                name: document.getElementById('wkName').value,
+                description: document.getElementById('wkDesc').value || null,
+                scheduled_date: document.getElementById('wkDate').value || null,
+            })
+        });
+        closeModal('workoutModal');
+        document.getElementById('wkName').value = '';
+        document.getElementById('wkDesc').value = '';
+        document.getElementById('wkDate').value = '';
+        loadWorkouts();
+    } catch (err) { alert(err.message); }
+}
+
+async function deleteWorkout(id) {
+    if (!confirm('Delete this workout and all its logs?')) return;
+    try { await api(`/workouts/${id}`, { method: 'DELETE' }); loadWorkouts(); }
+    catch (err) { alert(err.message); }
+}
+
+// ═══════════════════════════════════════════════ LOGS ═══
+let allExercises = [];
+let allWorkouts = [];
+
+async function openLogModal() {
+    try {
+        [allWorkouts, allExercises] = await Promise.all([api('/workouts/'), api('/exercises/')]);
+        document.getElementById('logWorkout').innerHTML = allWorkouts.map(w => `<option value="${w.id}">${w.name}</option>`).join('');
+        document.getElementById('logExercise').innerHTML = allExercises.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+        openModal('logModal');
+    } catch (err) { alert('Create a workout first!'); }
+}
+
+async function loadLogs() {
+    try {
+        const [logs, exercises, workouts] = await Promise.all([api('/logs/'), api('/exercises/'), api('/workouts/')]);
+        const exMap = Object.fromEntries(exercises.map(e => [e.id, e.name]));
+        const wkMap = Object.fromEntries(workouts.map(w => [w.id, w.name]));
+
+        const tbody = document.getElementById('logTable');
+        tbody.innerHTML = logs.length ? logs.map(l => `
+            <tr>
+                <td>${new Date(l.logged_at).toLocaleDateString()}</td>
+                <td>${wkMap[l.workout_id] || '—'}</td>
+                <td style="color:var(--text-primary);font-weight:500">${exMap[l.exercise_id] || '—'}</td>
+                <td>${l.sets}</td>
+                <td>${l.reps}</td>
+                <td>${l.weight_kg != null ? l.weight_kg : '—'}</td>
+                <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${l.notes || '—'}</td>
+                <td><button class="btn btn-danger btn-sm" onclick="deleteLog(${l.id})">Delete</button></td>
+            </tr>`).join('')
+            : '<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted)">No logs yet</td></tr>';
+    } catch (err) { console.error(err); }
+}
+
+async function createLog() {
+    try {
+        await api('/logs/', {
+            method: 'POST',
+            body: JSON.stringify({
+                workout_id: parseInt(document.getElementById('logWorkout').value),
+                exercise_id: parseInt(document.getElementById('logExercise').value),
+                sets: parseInt(document.getElementById('logSets').value),
+                reps: parseInt(document.getElementById('logReps').value),
+                weight_kg: parseFloat(document.getElementById('logWeight').value) || null,
+                duration_minutes: parseFloat(document.getElementById('logDuration').value) || null,
+                notes: document.getElementById('logNotes').value || null,
+            })
+        });
+        closeModal('logModal');
+        loadLogs();
+    } catch (err) { alert(err.message); }
+}
+
+async function deleteLog(id) {
+    if (!confirm('Delete this log entry?')) return;
+    try { await api(`/logs/${id}`, { method: 'DELETE' }); loadLogs(); }
+    catch (err) { alert(err.message); }
+}
+
+// ═══════════════════════════════════════════════ ANALYTICS ═══
+async function loadAnalytics() {
+    const period = document.getElementById('volumePeriod').value;
+    try {
+        const [streak, volume, muscle, records] = await Promise.all([
+            api('/analytics/streak'),
+            api(`/analytics/volume-trends?period=${period}`),
+            api('/analytics/muscle-group-distribution'),
+            api('/analytics/personal-records'),
+        ]);
+
+        // Stats
+        document.getElementById('analyticsStats').innerHTML = `
+            <div class="stat-card"><div class="label">Current Streak</div><div class="value">${streak.current_streak_days}</div><div class="sub">days</div></div>
+            <div class="stat-card"><div class="label">Longest Streak</div><div class="value">${streak.longest_streak_days}</div><div class="sub">days</div></div>
+            <div class="stat-card"><div class="label">Total Workout Days</div><div class="value">${streak.total_workout_days}</div></div>
+            <div class="stat-card"><div class="label">Personal Records</div><div class="value">${records.personal_records.length}</div></div>
+        `;
+
+        // Volume chart
+        destroyChart('volume');
+        const vCtx = document.getElementById('volumeChart').getContext('2d');
+        chartInstances.volume = new Chart(vCtx, {
+            type: 'line',
+            data: {
+                labels: volume.trends.map(t => t.period_label),
+                datasets: [{
+                    label: 'Volume (kg)',
+                    data: volume.trends.map(t => t.total_volume_kg),
+                    borderColor: '#6c5ce7',
+                    backgroundColor: 'rgba(108, 92, 231, 0.15)',
+                    fill: true,
+                    tension: 0.35,
+                    pointBackgroundColor: '#6c5ce7',
+                    pointRadius: 4,
+                }]
+            },
+            options: chartOpts('Total Volume (kg)')
+        });
+
+        // Muscle chart
+        destroyChart('muscle');
+        const mCtx = document.getElementById('muscleChart').getContext('2d');
+        const muscleColors = ['#6c5ce7','#00c853','#448aff','#ff9100','#ff5252','#26c6da','#ab47bc'];
+        chartInstances.muscle = new Chart(mCtx, {
+            type: 'doughnut',
+            data: {
+                labels: muscle.distribution.map(d => `${d.muscle_group} (${d.percentage}%)`),
+                datasets: [{
+                    data: muscle.distribution.map(d => d.total_sets),
+                    backgroundColor: muscleColors,
+                    borderColor: '#21242f',
+                    borderWidth: 2,
+                }]
+            },
+            options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#8b90a0', font: { family: 'DM Sans' } } } } }
+        });
+
+        // Records list
+        const prHtml = records.personal_records.length
+            ? records.personal_records.map(r => `
+                <div class="record-item">
+                    <div><div class="name">${r.exercise_name}</div><div class="detail">${r.reps} reps · ${r.logged_at ? new Date(r.logged_at).toLocaleDateString() : ''}</div></div>
+                    <div class="pr">${r.best_weight_kg} kg</div>
+                </div>`).join('')
+            : '<div class="empty-state"><p>No records yet — start logging!</p></div>';
+        document.getElementById('prList').innerHTML = prHtml;
+
+    } catch (err) { console.error('Analytics error:', err); }
+}
+</script>
+</body>
+</html>
