@@ -6,8 +6,12 @@ on startup.  Run with:
 """
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from app.config import settings
 from app.database import engine, Base
@@ -28,6 +32,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# CORS — allow the frontend (and any local dev tools) to reach the API
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Register routers
 app.include_router(auth.router)
 app.include_router(exercises.router)
@@ -35,10 +48,18 @@ app.include_router(workouts.router)
 app.include_router(workout_logs.router)
 app.include_router(analytics.router)
 
+# Serve the frontend dashboard
+STATIC_DIR = Path(__file__).parent / "static"
+if STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
 
 @app.get("/", tags=["Root"])
 def root():
-    """Health-check / welcome endpoint."""
+    """Serve the FitTrack dashboard (or JSON health-check via Accept header)."""
+    index = STATIC_DIR / "index.html"
+    if index.exists():
+        return FileResponse(str(index))
     return {
         "message": "Welcome to the FitTrack API",
         "docs": "/docs",
