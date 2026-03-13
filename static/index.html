@@ -456,6 +456,53 @@
             animation: spin 0.6s linear infinite;
             margin: 2rem auto;
         }
+
+        /* ── Benchmark bars ────────────────────────── */
+        .bench-item {
+            margin-bottom: 1.25rem;
+            padding-bottom: 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .bench-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .bench-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .bench-header .name { font-weight: 600; font-size: 0.92rem; }
+        .bench-header .classification {
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .bench-bar-wrap {
+            background: var(--bg-input);
+            border-radius: 6px;
+            height: 28px;
+            position: relative;
+            overflow: hidden;
+        }
+        .bench-bar {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.6s ease;
+            display: flex;
+            align-items: center;
+            padding-left: 10px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #fff;
+            min-width: 50px;
+        }
+        .bench-markers {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.3rem;
+            font-size: 0.68rem;
+            color: var(--text-muted);
+        }
         @keyframes spin { to { transform: rotate(360deg); } }
 
         /* ── Responsive ────────────────────────────── */
@@ -661,6 +708,25 @@
             <div class="card">
                 <h3>All Personal Records</h3>
                 <div id="prList"><div class="spinner"></div></div>
+            </div>
+            <div class="card">
+                <h3>Strength Benchmarks — How Do You Compare?</h3>
+                <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:1rem;">Compare your personal records against population strength standards. Select your details below.</p>
+                <div style="display:flex;gap:0.75rem;align-items:flex-end;margin-bottom:1.25rem;flex-wrap:wrap;">
+                    <div class="form-group" style="margin-bottom:0;min-width:130px;">
+                        <label>Gender</label>
+                        <select id="benchGender">
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;min-width:130px;">
+                        <label>Bodyweight (kg)</label>
+                        <input id="benchWeight" type="number" min="30" max="200" step="0.5" value="80" style="width:130px;">
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="loadBenchmarks()">Compare</button>
+                </div>
+                <div id="benchmarkResults"><div class="empty-state"><p>Click Compare to see how your lifts rank</p></div></div>
             </div>
         </div>
     </div>
@@ -1139,6 +1205,58 @@ async function loadAnalytics() {
         document.getElementById('prList').innerHTML = prHtml;
 
     } catch (err) { console.error('Analytics error:', err); }
+}
+
+// ═══════════════════════════════════════════════ BENCHMARKS ═══
+async function loadBenchmarks() {
+    const gender = document.getElementById('benchGender').value;
+    const bw = document.getElementById('benchWeight').value;
+    const container = document.getElementById('benchmarkResults');
+    container.innerHTML = '<div class="spinner"></div>';
+
+    try {
+        const data = await api(`/analytics/benchmarks?gender=${gender}&bodyweight_kg=${bw}`);
+
+        if (!data.comparisons.length) {
+            container.innerHTML = '<div class="empty-state"><p>No matching benchmarks for your exercises. Log some barbell lifts first!</p></div>';
+            return;
+        }
+
+        container.innerHTML = data.comparisons.map(c => {
+            const pct = Math.min(c.estimated_percentile, 100);
+            const colors = {
+                'below beginner': { bar: '#ff5252', text: 'var(--red)' },
+                'beginner': { bar: '#ff9100', text: 'var(--orange)' },
+                'novice': { bar: '#ffd600', text: '#ffd600' },
+                'intermediate': { bar: '#448aff', text: 'var(--blue)' },
+                'advanced': { bar: '#6c5ce7', text: 'var(--accent)' },
+                'elite': { bar: '#00c853', text: 'var(--green)' },
+            };
+            const color = colors[c.classification] || colors['beginner'];
+
+            return `
+            <div class="bench-item">
+                <div class="bench-header">
+                    <div class="name">${c.exercise_name} — <span style="font-family:'JetBrains Mono',monospace;">${c.your_pr_kg} kg</span></div>
+                    <div class="classification" style="color:${color.text}">${c.classification} · Top ${(100 - pct).toFixed(1)}%</div>
+                </div>
+                <div class="bench-bar-wrap">
+                    <div class="bench-bar" style="width:${Math.max(pct, 5)}%;background:${color.bar};">
+                        ${pct.toFixed(1)}%
+                    </div>
+                </div>
+                <div class="bench-markers">
+                    <span>Beginner ${c.standards.beginner}kg</span>
+                    <span>Novice ${c.standards.novice}kg</span>
+                    <span>Intermediate ${c.standards.intermediate}kg</span>
+                    <span>Advanced ${c.standards.advanced}kg</span>
+                    <span>Elite ${c.standards.elite}kg</span>
+                </div>
+            </div>`;
+        }).join('');
+    } catch (err) {
+        container.innerHTML = `<div class="empty-state"><p style="color:var(--red);">${err.message}</p></div>`;
+    }
 }
 </script>
 </body>
