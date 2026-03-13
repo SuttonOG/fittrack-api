@@ -39,7 +39,7 @@ Built with **FastAPI**, **SQLAlchemy**, and **SQLite** for the COMP3011 Web Serv
 ### Installation
 
 ```bash
-git clone https://github.com/<your-username>/fittrack-api.git
+git clone https://github.com/SuttonOG/fittrack-api.git
 cd fittrack-api
 python -m venv venv
 source venv/bin/activate   # Windows: venv\Scripts\activate
