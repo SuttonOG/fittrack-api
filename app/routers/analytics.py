@@ -73,7 +73,7 @@ def personal_records(
 
 @router.get("/volume-trends")
 def volume_trends(
-    period: str = Query("weekly", regex="^(weekly|monthly)$"),
+    period: str = Query("weekly", pattern="^(weekly|monthly)$"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
