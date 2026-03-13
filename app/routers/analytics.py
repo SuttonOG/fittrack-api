@@ -16,6 +16,7 @@ from app.models.user import User
 from app.models.workout import Workout
 from app.models.workout_log import WorkoutLog
 from app.models.exercise import Exercise
+from app.models.benchmark import Benchmark
 from app.auth.jwt import get_current_user
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
@@ -72,7 +73,7 @@ def personal_records(
 
 @router.get("/volume-trends")
 def volume_trends(
-    period: str = Query("weekly", pattern="^(weekly|monthly)$"),
+    period: str = Query("weekly", regex="^(weekly|monthly)$"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -185,3 +186,99 @@ def workout_streak(
         "longest_streak_days": longest,
         "total_workout_days": len(dates),
     }
+
+
+# ------------------------------------------------------------------
+# 5. Strength Benchmarks — compare PRs against population data
+# ------------------------------------------------------------------
+
+@router.get("/benchmarks")
+def strength_benchmarks(
+    gender: str = Query(..., pattern="^(male|female)$", description="Your gender"),
+    bodyweight_kg: float = Query(..., gt=0, description="Your bodyweight in kg"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Compare the user's personal records against population strength standards.
+
+    For each exercise where the user has logged a weight and a matching
+    benchmark exists, returns the user's classification (beginner → elite)
+    and an estimated percentile.
+
+    Query params:
+        gender: 'male' | 'female'
+        bodyweight_kg: user's current bodyweight in kilograms
+    """
+    # Get user's PRs
+    logs = _user_log_query(db, current_user.id).all()
+    best: dict[str, float] = {}
+    for log in logs:
+        if log.weight_kg is not None:
+            exercise = db.query(Exercise).filter(Exercise.id == log.exercise_id).first()
+            if exercise:
+                current_best = best.get(exercise.name, 0)
+                if log.weight_kg > current_best:
+                    best[exercise.name] = log.weight_kg
+
+    if not best:
+        return {"gender": gender, "bodyweight_kg": bodyweight_kg, "comparisons": []}
+
+    # Find the closest bodyweight bracket for each exercise
+    comparisons = []
+    for exercise_name, user_weight in best.items():
+        benchmarks = (
+            db.query(Benchmark)
+            .filter(Benchmark.exercise_name == exercise_name, Benchmark.gender == gender)
+            .all()
+        )
+        if not benchmarks:
+            continue
+
+        # Pick the closest bodyweight row
+        closest = min(benchmarks, key=lambda b: abs(b.bodyweight_kg - bodyweight_kg))
+
+        # Determine classification and estimated percentile
+        levels = [
+            ("beginner", closest.beginner_kg, 20),
+            ("novice", closest.novice_kg, 40),
+            ("intermediate", closest.intermediate_kg, 60),
+            ("advanced", closest.advanced_kg, 80),
+            ("elite", closest.elite_kg, 95),
+        ]
+
+        classification = "below beginner"
+        percentile = 5
+        for level_name, threshold, pct in levels:
+            if user_weight >= threshold:
+                classification = level_name
+                percentile = pct
+
+        # Interpolate percentile within the bracket for more accuracy
+        for i, (level_name, threshold, pct) in enumerate(levels):
+            if user_weight < threshold:
+                if i == 0:
+                    percentile = round(user_weight / threshold * 20, 1)
+                else:
+                    prev_threshold = levels[i - 1][1]
+                    prev_pct = levels[i - 1][2]
+                    ratio = (user_weight - prev_threshold) / (threshold - prev_threshold)
+                    percentile = round(prev_pct + ratio * (pct - prev_pct), 1)
+                break
+
+        comparisons.append({
+            "exercise_name": exercise_name,
+            "your_pr_kg": user_weight,
+            "classification": classification,
+            "estimated_percentile": min(percentile, 99.9),
+            "benchmark_bodyweight_kg": closest.bodyweight_kg,
+            "standards": {
+                "beginner": closest.beginner_kg,
+                "novice": closest.novice_kg,
+                "intermediate": closest.intermediate_kg,
+                "advanced": closest.advanced_kg,
+                "elite": closest.elite_kg,
+            },
+        })
+
+    comparisons.sort(key=lambda c: c["estimated_percentile"], reverse=True)
+    return {"gender": gender, "bodyweight_kg": bodyweight_kg, "comparisons": comparisons}
