@@ -1,11 +1,15 @@
-"""Populate the database with a starter set of common exercises.
+"""Populate the database with starter exercises and strength benchmark data.
 
 Run once after creating the database:
     python -m app.seed
 """
 
+import csv
+from pathlib import Path
+
 from app.database import SessionLocal, engine, Base
 from app.models.exercise import Exercise
+from app.models.benchmark import Benchmark
 
 EXERCISES = [
     {"name": "Barbell Bench Press", "muscle_group": "chest", "equipment": "barbell", "difficulty": "intermediate", "description": "Flat bench press targeting the pectorals."},
@@ -30,6 +34,7 @@ def seed():
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
+        # ── Seed exercises ────────────────────────────
         existing = {e.name for e in db.query(Exercise.name).all()}
         added = 0
         for ex in EXERCISES:
@@ -38,6 +43,35 @@ def seed():
                 added += 1
         db.commit()
         print(f"Seeded {added} exercises ({len(existing)} already existed).")
+
+        # ── Seed benchmarks from CSV ─────────────────
+        csv_path = Path(__file__).parent.parent / "data" / "strength_benchmarks.csv"
+        if not csv_path.exists():
+            print(f"Benchmark CSV not found at {csv_path}, skipping.")
+            return
+
+        existing_benchmarks = db.query(Benchmark).count()
+        if existing_benchmarks > 0:
+            print(f"Benchmarks already seeded ({existing_benchmarks} rows), skipping.")
+            return
+
+        with open(csv_path, newline="") as f:
+            reader = csv.DictReader(f)
+            bench_count = 0
+            for row in reader:
+                db.add(Benchmark(
+                    exercise_name=row["exercise_name"],
+                    gender=row["gender"],
+                    bodyweight_kg=float(row["bodyweight_kg"]),
+                    beginner_kg=float(row["beginner_kg"]),
+                    novice_kg=float(row["novice_kg"]),
+                    intermediate_kg=float(row["intermediate_kg"]),
+                    advanced_kg=float(row["advanced_kg"]),
+                    elite_kg=float(row["elite_kg"]),
+                ))
+                bench_count += 1
+        db.commit()
+        print(f"Seeded {bench_count} benchmark rows from CSV.")
     finally:
         db.close()
 
